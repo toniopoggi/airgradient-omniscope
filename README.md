@@ -1,8 +1,8 @@
 # AirGradient Omniscope Firmware
 
 Privacy-first firmware for the **AirGradient ONE I-9PSL** that sends current
-air-quality measurements directly to a self-hosted
-[Omniscope](https://www.omniscope.com/) Workflow API.
+air-quality measurements directly to the Omniscope Workflow API at
+[public.omniscope.me](https://public.omniscope.me/).
 
 [Install firmware in Chrome](https://toniopoggi.github.io/airgradient-omniscope/)
 ·
