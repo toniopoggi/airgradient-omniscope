@@ -7,7 +7,7 @@
 #endif
 #include <time.h>
 
-#define EEPROM_CONFIG_SIZE 1024
+#define EEPROM_CONFIG_SIZE 4096
 #define CONFIG_FILE_NAME "/AgConfigure_Configuration.json"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
@@ -47,6 +47,13 @@ JSON_PROP_DEF(tvocLearningOffset);
 JSON_PROP_DEF(noxLearningOffset);
 JSON_PROP_DEF(mqttBrokerUrl);
 JSON_PROP_DEF(httpDomain);
+JSON_PROP_DEF(omniscopeWorkflowEnabled);
+JSON_PROP_DEF(omniscopeWorkflowEndpoint);
+JSON_PROP_DEF(omniscopeWorkflowBlock);
+JSON_PROP_DEF(omniscopeWorkflowParameter);
+JSON_PROP_DEF(omniscopeWorkflowUsername);
+JSON_PROP_DEF(omniscopeWorkflowPassword);
+JSON_PROP_DEF(omniscopeWorkflowPasswordSet);
 JSON_PROP_DEF(temperatureUnit);
 JSON_PROP_DEF(configurationControl);
 JSON_PROP_DEF(postDataToAirGradient);
@@ -70,6 +77,12 @@ JSON_PROP_DEF(rhum);
 #define jprop_noxLearningOffset_default               12
 #define jprop_mqttBrokerUrl_default                   ""
 #define jprop_httpDomain_default                      ""
+#define jprop_omniscopeWorkflowEnabled_default        false
+#define jprop_omniscopeWorkflowEndpoint_default       ""
+#define jprop_omniscopeWorkflowBlock_default          ""
+#define jprop_omniscopeWorkflowParameter_default      "measurementJson"
+#define jprop_omniscopeWorkflowUsername_default       ""
+#define jprop_omniscopeWorkflowPassword_default       ""
 #define jprop_temperatureUnit_default                 "c"
 #define jprop_configurationControl_default            String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
 #define jprop_postDataToAirGradient_default           true
@@ -320,7 +333,7 @@ bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &ta
  *
  */
 void Configuration::saveConfig(void) {
-  String data = toString();
+  String data = JSON.stringify(jconfig);
   int len = data.length();
 #ifdef ESP8266
   for (int i = 0; i < len; i++) {
@@ -380,6 +393,18 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_country] = jprop_country_default;
   jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
   jconfig[jprop_httpDomain] = jprop_httpDomain_default;
+  jconfig[jprop_omniscopeWorkflowEnabled] =
+      jprop_omniscopeWorkflowEnabled_default;
+  jconfig[jprop_omniscopeWorkflowEndpoint] =
+      jprop_omniscopeWorkflowEndpoint_default;
+  jconfig[jprop_omniscopeWorkflowBlock] =
+      jprop_omniscopeWorkflowBlock_default;
+  jconfig[jprop_omniscopeWorkflowParameter] =
+      jprop_omniscopeWorkflowParameter_default;
+  jconfig[jprop_omniscopeWorkflowUsername] =
+      jprop_omniscopeWorkflowUsername_default;
+  jconfig[jprop_omniscopeWorkflowPassword] =
+      jprop_omniscopeWorkflowPassword_default;
   jconfig[jprop_configurationControl] = jprop_configurationControl_default;
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
@@ -470,7 +495,12 @@ void Configuration::setConfigurationUpdatedCallback(ConfigurationUpdatedCallback
  * @return false Failure
  */
 bool Configuration::parse(String data, bool isLocal) {
-  logInfo("Parsing configuration: " + data);
+  if (data.indexOf(String("\"") + jprop_omniscopeWorkflowPassword +
+                   String("\"")) >= 0) {
+    logInfo("Parsing configuration (Omniscope credentials redacted)");
+  } else {
+    logInfo("Parsing configuration: " + data);
+  }
 
   JSONVar root = JSON.parse(data);
   failedMessage = "";
@@ -787,6 +817,84 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  if (isLocal) {
+    if (JSON.typeof_(root[jprop_omniscopeWorkflowEnabled]) == "boolean") {
+      bool value = root[jprop_omniscopeWorkflowEnabled];
+      bool oldValue = jconfig[jprop_omniscopeWorkflowEnabled];
+      if (value != oldValue) {
+        changed = true;
+        jconfig[jprop_omniscopeWorkflowEnabled] = value;
+        configLogInfo(String(jprop_omniscopeWorkflowEnabled),
+                      String(oldValue ? "true" : "false"),
+                      String(value ? "true" : "false"));
+      }
+    } else if (jsonTypeInvalid(root[jprop_omniscopeWorkflowEnabled],
+                               "boolean")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_omniscopeWorkflowEnabled), "boolean");
+      jsonInvalid();
+      return false;
+    }
+
+    struct OmniscopeStringConfig {
+      const char *property;
+      size_t maximumLength;
+    };
+    const OmniscopeStringConfig stringConfigs[] = {
+        {jprop_omniscopeWorkflowEndpoint, 512},
+        {jprop_omniscopeWorkflowBlock, 128},
+        {jprop_omniscopeWorkflowParameter, 128},
+        {jprop_omniscopeWorkflowUsername, 128},
+    };
+
+    for (const auto &stringConfig : stringConfigs) {
+      if (JSON.typeof_(root[stringConfig.property]) == "string") {
+        String value = root[stringConfig.property];
+        if (value.length() > stringConfig.maximumLength) {
+          failedMessage = String("\"") + stringConfig.property +
+                          String("\" is too long");
+          jsonInvalid();
+          return false;
+        }
+        String oldValue = jconfig[stringConfig.property];
+        if (value != oldValue) {
+          changed = true;
+          jconfig[stringConfig.property] = value;
+          configLogInfo(String(stringConfig.property), oldValue, value);
+        }
+      } else if (jsonTypeInvalid(root[stringConfig.property], "string")) {
+        failedMessage =
+            jsonTypeInvalidMessage(String(stringConfig.property), "string");
+        jsonInvalid();
+        return false;
+      }
+    }
+
+    if (JSON.typeof_(root[jprop_omniscopeWorkflowPassword]) == "string") {
+      String value = root[jprop_omniscopeWorkflowPassword];
+      if (value != "********") {
+        if (value.length() > 128) {
+          failedMessage =
+              "\"omniscopeWorkflowPassword\" is too long";
+          jsonInvalid();
+          return false;
+        }
+        String oldValue = jconfig[jprop_omniscopeWorkflowPassword];
+        if (value != oldValue) {
+          changed = true;
+          jconfig[jprop_omniscopeWorkflowPassword] = value;
+          logInfo("Omniscope workflow password updated");
+        }
+      }
+    } else if (jsonTypeInvalid(root[jprop_omniscopeWorkflowPassword],
+                               "string")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_omniscopeWorkflowPassword), "string");
+      jsonInvalid();
+      return false;
+    }
+  }
+
   if (JSON.typeof_(root[jprop_temperatureUnit]) == "string") {
     String unit = root[jprop_temperatureUnit];
     String oldUnit = jconfig[jprop_temperatureUnit];
@@ -829,6 +937,24 @@ bool Configuration::parse(String data, bool isLocal) {
         jsonInvalid();
         return false;
       }
+    }
+
+    if (JSON.typeof_(root[jprop_disableCloudConnection]) == "boolean") {
+      bool value = root[jprop_disableCloudConnection];
+      bool oldValue = jconfig[jprop_disableCloudConnection];
+      if (value != oldValue) {
+        changed = true;
+        configLogInfo(String(jprop_disableCloudConnection),
+                      String(oldValue ? "true" : "false"),
+                      String(value ? "true" : "false"));
+        jconfig[jprop_disableCloudConnection] = value;
+      }
+    } else if (jsonTypeInvalid(root[jprop_disableCloudConnection],
+                               "boolean")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_disableCloudConnection), "boolean");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -975,7 +1101,15 @@ bool Configuration::parse(String data, bool isLocal) {
  *
  * @return String
  */
-String Configuration::toString(void) { return JSON.stringify(jconfig); }
+String Configuration::toString(void) {
+  JSONVar visibleConfig = JSON.parse(JSON.stringify(jconfig));
+  String password = jconfig[jprop_omniscopeWorkflowPassword];
+  visibleConfig[jprop_omniscopeWorkflowPassword] =
+      password.length() > 0 ? "********" : "";
+  visibleConfig[jprop_omniscopeWorkflowPasswordSet] =
+      password.length() > 0;
+  return JSON.stringify(visibleConfig);
+}
 
 /**
  * @brief Get current configuration value as JSON string
@@ -1080,6 +1214,30 @@ String Configuration::getMqttBrokerUri(void) {
 String Configuration::getHttpDomain(void) {
   String httpDomain = jconfig[jprop_httpDomain];
   return httpDomain;
+}
+
+bool Configuration::isOmniscopeWorkflowEnabled(void) {
+  return jconfig[jprop_omniscopeWorkflowEnabled];
+}
+
+String Configuration::getOmniscopeWorkflowEndpoint(void) {
+  return jconfig[jprop_omniscopeWorkflowEndpoint];
+}
+
+String Configuration::getOmniscopeWorkflowBlock(void) {
+  return jconfig[jprop_omniscopeWorkflowBlock];
+}
+
+String Configuration::getOmniscopeWorkflowParameter(void) {
+  return jconfig[jprop_omniscopeWorkflowParameter];
+}
+
+String Configuration::getOmniscopeWorkflowUsername(void) {
+  return jconfig[jprop_omniscopeWorkflowUsername];
+}
+
+String Configuration::getOmniscopeWorkflowPassword(void) {
+  return jconfig[jprop_omniscopeWorkflowPassword];
 }
 
 /**
@@ -1337,6 +1495,44 @@ void Configuration::toConfig(const char *buf) {
     changed = true;
     jconfig[jprop_httpDomain] = jprop_httpDomain_default;
     logInfo("toConfig: httpDomain changed");
+  }
+
+  /** Validate Omniscope workflow configuration */
+  if (JSON.typeof_(jconfig[jprop_omniscopeWorkflowEnabled]) != "boolean") {
+    jconfig[jprop_omniscopeWorkflowEnabled] =
+        jprop_omniscopeWorkflowEnabled_default;
+    changed = true;
+    logInfo("toConfig: omniscopeWorkflowEnabled changed");
+  }
+
+  struct OmniscopeSavedStringConfig {
+    const char *property;
+    const char *defaultValue;
+    size_t maximumLength;
+  };
+  const OmniscopeSavedStringConfig omniscopeStringConfigs[] = {
+      {jprop_omniscopeWorkflowEndpoint,
+       jprop_omniscopeWorkflowEndpoint_default, 512},
+      {jprop_omniscopeWorkflowBlock, jprop_omniscopeWorkflowBlock_default,
+       128},
+      {jprop_omniscopeWorkflowParameter,
+       jprop_omniscopeWorkflowParameter_default, 128},
+      {jprop_omniscopeWorkflowUsername,
+       jprop_omniscopeWorkflowUsername_default, 128},
+      {jprop_omniscopeWorkflowPassword,
+       jprop_omniscopeWorkflowPassword_default, 128},
+  };
+  for (const auto &stringConfig : omniscopeStringConfigs) {
+    bool invalid = JSON.typeof_(jconfig[stringConfig.property]) != "string";
+    if (!invalid) {
+      String value = jconfig[stringConfig.property];
+      invalid = value.length() > stringConfig.maximumLength;
+    }
+    if (invalid) {
+      jconfig[stringConfig.property] = stringConfig.defaultValue;
+      changed = true;
+      logInfo(String("toConfig: ") + stringConfig.property + " changed");
+    }
   }
 
   /** Validate temperature unit */

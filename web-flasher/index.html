@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Install the AirGradient Omniscope firmware on an I-9PSL over USB.">
+  <title>AirGradient Omniscope Firmware Installer</title>
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module">
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07110e;
+      --panel: #0d1c17;
+      --soft: #132720;
+      --line: #244438;
+      --text: #ecfff7;
+      --muted: #9bb8ad;
+      --accent: #31c48d;
+      --accent-hover: #48dca5;
+      --warning: #f6c85f;
+      --radius: 18px;
+      --esp-tools-button-color: var(--accent);
+      --esp-tools-button-text-color: #032016;
+      --esp-tools-button-border-radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(49, 196, 141, .16), transparent 34rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    main {
+      width: min(850px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: clamp(32px, 7vw, 80px) 0;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px;
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px var(--accent);
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(2.1rem, 7vw, 4.6rem);
+      line-height: .98;
+      letter-spacing: -.055em;
+    }
+
+    .lead {
+      max-width: 680px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.2vw, 1.16rem);
+    }
+
+    .panel {
+      margin-top: 36px;
+      padding: clamp(22px, 4vw, 34px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .25);
+    }
+
+    .version {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .value {
+      display: block;
+      margin-top: 3px;
+      font-weight: 800;
+    }
+
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 1.12rem;
+    }
+
+    ol {
+      margin: 0;
+      padding-left: 1.35rem;
+      color: var(--muted);
+    }
+
+    li + li { margin-top: 8px; }
+    strong { color: var(--text); }
+
+    .warning {
+      margin: 24px 0;
+      padding: 15px 17px;
+      border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--line));
+      border-radius: 13px;
+      background: color-mix(in srgb, var(--warning) 8%, var(--soft));
+      color: #ffe9ae;
+      font-size: .91rem;
+    }
+
+    esp-web-install-button {
+      display: block;
+      margin-top: 22px;
+    }
+
+    button {
+      width: 100%;
+      min-height: 54px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #032016;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+    .unsupported {
+      display: block;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--soft);
+      color: var(--muted);
+    }
+
+    .privacy {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .fact {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--soft);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .fact strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    footer {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: .86rem;
+    }
+
+    a { color: var(--accent); }
+
+    @media (max-width: 640px) {
+      .privacy { grid-template-columns: 1fr; }
+      h1 { letter-spacing: -.04em; }
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #f2faf6;
+        --panel: #ffffff;
+        --soft: #edf7f2;
+        --line: #c8ddd3;
+        --text: #10231c;
+        --muted: #557067;
+        --accent: #087f5b;
+        --accent-hover: #0a936a;
+        --warning: #9a6700;
+        --esp-tools-button-text-color: #ffffff;
+      }
+
+      button { color: #fff; }
+      .warning { color: #654600; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Private, direct, local</p>
+    <h1>AirGradient to Omniscope</h1>
+    <p class="lead">
+      Install the custom I-9PSL firmware that sends one configurable HTTPS
+      Workflow API request per minute—without AirGradient Cloud, MQTT, a local
+      collector, or an inbound router port.
+    </p>
+
+    <section class="panel" aria-labelledby="install-heading">
+      <div class="version">
+        <div><span class="label">Firmware</span><span class="value">3.3.9-omniscope.1</span></div>
+        <div><span class="label">Hardware</span><span class="value">AirGradient ONE I-9PSL</span></div>
+        <div><span class="label">Chip</span><span class="value">ESP32-C3 · 4 MB</span></div>
+      </div>
+
+      <h2 id="install-heading">Before installing</h2>
+      <ol>
+        <li>Use <strong>Chrome or Edge</strong> on a computer and a USB-C data cable.</li>
+        <li>Close Android Studio, PlatformIO, Arduino IDE, and serial monitors.</li>
+        <li>Disconnect the monitor, hold its recessed <strong>BOOT</strong> button, connect USB, then release BOOT.</li>
+        <li>Click below and select <strong>USB JTAG / Serial Debug</strong>.</li>
+      </ol>
+
+      <div class="warning">
+        The installer can preserve your settings or erase the device. Start by
+        preserving them. Erasing removes Wi-Fi and all monitor configuration.
+        Do not disconnect USB while writing.
+      </div>
+
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate" type="button">Connect and install firmware</button>
+        <span class="unsupported" slot="unsupported">
+          This installer requires desktop Chrome, Edge, or another Chromium
+          browser with Web Serial support.
+        </span>
+        <span class="unsupported" slot="not-allowed">
+          Web Serial requires this page to be served over HTTPS or localhost.
+        </span>
+      </esp-web-install-button>
+
+      <div class="privacy" aria-label="Privacy facts">
+        <div class="fact"><strong>USB-local flashing</strong>The browser writes directly to the connected ESP32-C3.</div>
+        <div class="fact"><strong>No credentials</strong>Omniscope credentials are configured later on your LAN.</div>
+        <div class="fact"><strong>Recoverable</strong>The official AirGradient browser installer can restore stock firmware.</div>
+      </div>
+    </section>
+
+    <footer>
+      <a href="https://github.com/toniopoggi/airgradient-omniscope">Source code</a>
+      <a href="https://github.com/toniopoggi/airgradient-omniscope/blob/omniscope-workflow-api/OMNISCOPE_WORKFLOW.md">Technical documentation</a>
+      <a href="https://www.airgradient.com/documentation/kb/kb-firmwares-airgradient-one-i-9psl-open-air-o-1pst-and-open-air-max-o-m-1ppst-firmware-versions/">Official recovery firmware</a>
+    </footer>
+  </main>
+</body>
+</html>

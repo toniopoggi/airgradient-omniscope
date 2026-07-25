@@ -3,6 +3,11 @@ AirGradient Arduino Library for ESP8266 (Wemos D1 MINI) and ESP32 (ESP32-C3 Mini
 
 This is the code for the AirGradient open-source indoor and outdoor air quality monitors with ESP8266 / ESP32-C3 Microcontrollers.
 
+> **Omniscope fork:** the `omniscope-workflow-api` branch adds an optional,
+> configurable, once-per-minute HTTPS upload to an Omniscope Workflow API.
+> See [OMNISCOPE_WORKFLOW.md](OMNISCOPE_WORKFLOW.md) for the design, security
+> model, configuration fields, request format, building, and flashing.
+
 More information on the air quality monitors and kits are available here:
 Indoor Monitor: [https://www.airgradient.com/indoor/](https://www.airgradient.com/indoor/)
 Outdoor Monitor: [https://www.airgradient.com/outdoor/](https://www.airgradient.com/outdoor/)

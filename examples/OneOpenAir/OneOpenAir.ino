@@ -40,6 +40,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
+#include "OmniscopeWorkflowClient.h"
 #include "WebServer.h"
 #include "esp32c3/rom/rtc.h"
 #include <HardwareSerial.h>
@@ -95,6 +96,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define MINUTES() ((uint32_t)(esp_timer_get_time() / 1000 / 1000 / 60))
 
 static MqttClient mqttClient(Serial);
+static OmniscopeWorkflowClient omniscopeWorkflowClient;
 static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
 static Measurements measurements(configuration);
@@ -141,6 +143,7 @@ static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
 static void sendDataToServer(void);
+static void sendDataToOmniscope(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
 static void printMeasurements();
@@ -165,6 +168,8 @@ AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule transmissionSchedule(WIFI_TRANSMISSION_INTERVAL, sendDataToServer);
+AgSchedule omniscopeSchedule(WIFI_TRANSMISSION_INTERVAL,
+                             sendDataToOmniscope);
 AgSchedule measurementSchedule(WIFI_MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
@@ -1461,6 +1466,33 @@ void sendDataToServer(void) {
   }
 }
 
+void sendDataToOmniscope(void) {
+  if (!configuration.isOmniscopeWorkflowEnabled()) {
+    return;
+  }
+  if (networkOption != UseWifi) {
+    Serial.println("Omniscope: workflow API is available on WiFi only");
+    return;
+  }
+
+  const String endpoint = configuration.getOmniscopeWorkflowEndpoint();
+  const String block = configuration.getOmniscopeWorkflowBlock();
+  const String parameter = configuration.getOmniscopeWorkflowParameter();
+  const String username = configuration.getOmniscopeWorkflowUsername();
+  const String password = configuration.getOmniscopeWorkflowPassword();
+  if (endpoint.length() == 0 || block.length() == 0 ||
+      parameter.length() == 0 || username.length() == 0 ||
+      password.length() == 0) {
+    Serial.println("Omniscope: workflow configuration is incomplete");
+    return;
+  }
+
+  const String payload =
+      measurements.toString(false, fwMode, wifiConnector.RSSI());
+  omniscopeWorkflowClient.postMeasurement(endpoint, block, parameter,
+                                           username, password, payload);
+}
+
 static void tempHumUpdate(void) {
   delay(100);
   if (ag->sht.measure()) {
@@ -1582,6 +1614,7 @@ void restartIfCeClientIssueOverTwoHours() {
 }
 
 void networkingTask(void *args) {
+  omniscopeSchedule.update();
   // If cloud connection enabled, run first transmission to server at boot
   if (configuration.isCloudConnectionDisabled() == false) {
     // OTA check on boot
@@ -1657,6 +1690,8 @@ void networkingTask(void *args) {
     }
 
     // If connection to AirGradient server disable don't run config and transmission schedule
+    omniscopeSchedule.run();
+
     if (configuration.isCloudConnectionDisabled()) {
       delay(1000);
       continue;

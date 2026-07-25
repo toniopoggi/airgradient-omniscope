@@ -87,6 +87,12 @@ public:
   bool getDisplayMode(void);
   String getMqttBrokerUri(void);
   String getHttpDomain(void);
+  bool isOmniscopeWorkflowEnabled(void);
+  String getOmniscopeWorkflowEndpoint(void);
+  String getOmniscopeWorkflowBlock(void);
+  String getOmniscopeWorkflowParameter(void);
+  String getOmniscopeWorkflowUsername(void);
+  String getOmniscopeWorkflowPassword(void);
   bool isPostDataToAirGradient(void);
   ConfigurationControl getConfigurationControl(void);
   bool isCo2CalibrationRequested(void);
