@@ -92,6 +92,8 @@ bool OmniscopeWorkflowClient::postMeasurement(
 
   client.addHeader("Content-Type", "application/json");
   client.addHeader("Authorization", authorization);
+  Serial.printf("Omniscope: submitting workflow (%u-byte request)\n",
+                static_cast<unsigned int>(body.length()));
   const int statusCode = client.POST(body);
   client.end();
 

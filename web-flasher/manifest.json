@@ -1,6 +1,6 @@
 {
   "name": "AirGradient Omniscope",
-  "version": "3.3.9-omniscope.1",
+  "version": "3.3.9-omniscope.2",
   "new_install_prompt_erase": true,
   "builds": [
     {

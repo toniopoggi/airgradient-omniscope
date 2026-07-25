@@ -109,7 +109,11 @@ The application image is produced at:
 .pio/build/esp32-c3/firmware.bin
 ```
 
-The build identifies itself as `3.3.9-omniscope.1`.
+The build identifies itself as `3.3.9-omniscope.2`.
+
+Version `.2` increases the networking task stack from 4096 to 12288 bytes.
+The original stack size overflowed during the ESP32-C3 TLS handshake on the
+first scheduled Omniscope request.
 
 ## Chrome installer
 

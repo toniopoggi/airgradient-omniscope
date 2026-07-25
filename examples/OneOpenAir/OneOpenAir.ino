@@ -65,6 +65,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define WIFI_SERVER_CONFIG_SYNC_INTERVAL 1 * 60000     /** ms */
 #define WIFI_MEASUREMENT_INTERVAL 1 * 60000            /** ms */
 #define WIFI_TRANSMISSION_INTERVAL 1 * 60000           /** ms */
+#define NETWORKING_TASK_STACK_SIZE 12288                /** bytes */
 #define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 30 * 60000 /** ms */
 #define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000        /** ms */
 #define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000       /** ms */
@@ -295,8 +296,12 @@ void setup() {
 
   // Only run network task if monitor is not in offline mode
   if (configuration.isOfflineMode() == false) {
-    BaseType_t xReturned =
-      xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
+    // HTTPS/TLS requires substantially more stack than the original cloud-only
+    // networking path. A 4096-byte stack overflows during the TLS handshake on
+    // ESP32-C3, so reserve enough headroom for TLS and request JSON handling.
+    BaseType_t xReturned = xTaskCreate(
+        networkingTask, "NetworkingTask", NETWORKING_TASK_STACK_SIZE, null, 5,
+        &handleNetworkTask);
     if (xReturned == pdPASS) {
       Serial.println("Success create networking task");
     } else {
