@@ -4,6 +4,9 @@ This directory is a static
 [ESP Web Tools](https://esphome.github.io/esp-web-tools/) installer for the
 AirGradient ONE I-9PSL custom firmware.
 
+The published installer is available at
+[toniopoggi.github.io/airgradient-omniscope](https://toniopoggi.github.io/airgradient-omniscope/).
+
 The page must be served over HTTPS or from localhost because Web Serial is
 available only in a secure browser context.
 
