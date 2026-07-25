@@ -6,7 +6,9 @@ This is the code for the AirGradient open-source indoor and outdoor air quality 
 > **Omniscope fork:** the `omniscope-workflow-api` branch adds an optional,
 > configurable, once-per-minute HTTPS upload to an Omniscope Workflow API.
 > See [OMNISCOPE_WORKFLOW.md](OMNISCOPE_WORKFLOW.md) for the design, security
-> model, configuration fields, request format, building, and flashing.
+> model, configuration fields, request format, building, and flashing. The
+> companion [AirGradient Omniscope Android app](https://github.com/toniopoggi/airgradient-omniscope-android)
+> provides the local configuration and monitoring interface.
 
 More information on the air quality monitors and kits are available here:
 Indoor Monitor: [https://www.airgradient.com/indoor/](https://www.airgradient.com/indoor/)
