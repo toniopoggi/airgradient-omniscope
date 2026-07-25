@@ -1,54 +1,182 @@
-AirGradient Arduino Library for ESP8266 (Wemos D1 MINI) and ESP32 (ESP32-C3 Mini)
-=====================================================================================================
+# AirGradient Omniscope Firmware
 
-This is the code for the AirGradient open-source indoor and outdoor air quality monitors with ESP8266 / ESP32-C3 Microcontrollers.
+Privacy-first firmware for the **AirGradient ONE I-9PSL** that sends current
+air-quality measurements directly to a self-hosted
+[Omniscope](https://www.omniscope.com/) Workflow API.
 
-> **Omniscope fork:** the `omniscope-workflow-api` branch adds an optional,
-> configurable, once-per-minute HTTPS upload to an Omniscope Workflow API.
-> See [OMNISCOPE_WORKFLOW.md](OMNISCOPE_WORKFLOW.md) for the design, security
-> model, configuration fields, request format, building, and flashing. The
-> companion [AirGradient Omniscope Android app](https://github.com/toniopoggi/airgradient-omniscope-android)
-> provides the local configuration and monitoring interface.
+[Install firmware in Chrome](https://toniopoggi.github.io/airgradient-omniscope/)
+·
+[Download the Android controller](https://toniopoggi.github.io/airgradient-omniscope-android/)
+·
+[Technical documentation](OMNISCOPE_WORKFLOW.md)
 
-More information on the air quality monitors and kits are available here:
-Indoor Monitor: [https://www.airgradient.com/indoor/](https://www.airgradient.com/indoor/)
-Outdoor Monitor: [https://www.airgradient.com/outdoor/](https://www.airgradient.com/outdoor/)
+## Current release
 
-This library supports the following sensor modules:
-- Plantower PMS5003
-- Plantower PMS5003T
-- SenseAir S8
-- Sensirion SGP41
-- Sensirion SHT40
+**`3.3.9-omniscope.2`**
 
-## Important information
+- Based on the official AirGradient firmware `3.3.9`.
+- Tested on an AirGradient ONE `I-9PSL`.
+- Sends one configurable HTTPS request every 60 seconds.
+- Includes the networking-stack fix required for HTTPS/TLS on the ESP32-C3.
 
-Make sure you have exactly the versions of libraries and boards installed as described in the comment section of the example files.
+## Why this fork exists
 
-If you have an older version of the AirGradient PCB not mentioned in the example files, please downgrade this library to version 2.4.15 to support these legacy boards.
+The standard AirGradient cloud was intentionally excluded from this design.
+The monitor sends directly from the local network to your own public Omniscope
+instance:
 
-## Help & Support
+```text
+AirGradient ONE
+       |
+       | HTTPS + Basic authentication
+       | one request per minute
+       v
+Omniscope Workflow API
+       |
+       v
+Parse JSON → add server UTC timestamp → append history → dashboard
+```
 
-If you have any questions or problems, check out [our forum](https://forum.airgradient.com/). 
+There is no MQTT broker, local collector, always-on computer, inbound router
+port, third-party analytics service, or device-side retry queue.
 
-## Documentation
+## Features
 
-Local server API documentation is available in [/docs/local-server.md](/docs/local-server.md) and AirGradient server API on [https://api.airgradient.com/public/docs/api/v1/](https://api.airgradient.com/public/docs/api/v1/).
+- Configurable complete Omniscope `/w/execute` endpoint.
+- Configurable workflow block and parameter name.
+- Configurable Basic-auth username and password.
+- Enable or disable uploads without reflashing.
+- Sends the complete AirGradient measurement JSON as a string parameter.
+- Supports `refreshFromSource: true`.
+- AirGradient cloud connections can remain disabled.
+- Local `/config`, `/measures/current`, and `/metrics` APIs remain available.
+- Chrome/Edge USB installer with a recoverable stock-firmware path.
+- Companion Android app for local configuration and live measurements.
 
-## The following libraries have been integrated into this library for ease of use
+## Install the firmware
 
-- [Adafruit BusIO](https://github.com/adafruit/Adafruit_BusIO)
-- [Adafruit NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel)
-- [Adafruit SH110X](https://github.com/adafruit/Adafruit_SH110X)
-- [Adafruit SSD1306 Wemos Mini OLED](https://github.com/stblassitude/Adafruit_SSD1306_Wemos_OLED)
-- [Adafruit GFX Library](https://github.com/adafruit/Adafruit-GFX-Library)
-- [Sensirion Gas Index Algorithm](https://github.com/Sensirion/arduino-gas-index-algorithm)
-- [Sensirion Core](https://github.com/Sensirion/arduino-core/)
-- [Sensirion I2C SGP41](https://github.com/Sensirion/arduino-i2c-sgp41)
-- [Sensirion I2C SHT](https://github.com/Sensirion/arduino-sht)
-- [WiFiManager](https://github.com/tzapu/WiFiManager)
-- [Arduino_JSON](https://github.com/arduino-libraries/Arduino_JSON)
-- [PubSubClient](https://github.com/knolleary/pubsubclient)
+Use desktop Chrome, Edge, or another Chromium browser:
 
-## License
-CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
+1. Open the
+   [AirGradient Omniscope installer](https://toniopoggi.github.io/airgradient-omniscope/).
+2. Unplug the monitor.
+3. Hold the recessed **BOOT** button.
+4. Connect USB while holding BOOT, then release it.
+5. Click **Connect and install firmware**.
+6. Select **USB JTAG / Serial Debug**.
+7. Leave **Erase device** unchecked to preserve Wi-Fi and configuration.
+8. Install, unplug USB for three seconds, then reconnect normally.
+
+The installer writes the ESP32-C3 bootloader, partition table, boot-app stub,
+and application image at their verified flash offsets.
+
+## Configure it
+
+Install the
+[AirGradient Omniscope Android app](https://github.com/toniopoggi/airgradient-omniscope-android),
+connect to the monitor using its `.local` hostname or private LAN IP, and
+complete the **Omniscope Workflow API** section.
+
+| Setting | Purpose |
+|---|---|
+| `omniscopeWorkflowEnabled` | Enables the one-minute upload |
+| `omniscopeWorkflowEndpoint` | Complete HTTPS `/w/execute` URL |
+| `omniscopeWorkflowBlock` | Workflow block to execute |
+| `omniscopeWorkflowParameter` | Parameter receiving the measurement JSON |
+| `omniscopeWorkflowUsername` | Basic-auth username |
+| `omniscopeWorkflowPassword` | Basic-auth password |
+
+For private operation:
+
+```json
+{
+  "offlineMode": false,
+  "postDataToAirGradient": false,
+  "disableCloudConnection": true,
+  "omniscopeWorkflowEnabled": true
+}
+```
+
+`offlineMode` must remain `false`; otherwise the firmware does not start its
+networking task.
+
+## Workflow request
+
+Every 60 seconds the firmware sends:
+
+```json
+{
+  "blocks": ["CONFIGURED BLOCK"],
+  "refreshFromSource": true,
+  "cancelExisting": false,
+  "waitForIdle": true,
+  "params": {
+    "updates": [
+      {
+        "name": "CONFIGURED PARAMETER",
+        "value": "{\"wifi\":-55,\"rco2\":620,\"pm02\":4}"
+      }
+    ],
+    "waitForIdle": true
+  }
+}
+```
+
+The value is the complete measurement object serialized as a JSON string. The
+Omniscope workflow can parse it, add a server-side UTC timestamp, append the
+record, and refresh the dashboard data.
+
+## Security and privacy
+
+- Only HTTPS endpoints are accepted.
+- Requests use Basic authentication over TLS.
+- The firmware trusts the public Sectigo root used by `*.omniscope.me`.
+- No private certificate or Omniscope server key is embedded.
+- Credentials are stored locally on the monitor.
+- `GET /config` returns `********`, never the stored password.
+- Omniscope fields can be changed only through the monitor's local API.
+- The Android WebView exposes its native bridge only to bundled trusted HTML.
+- No account, advertising, analytics, or third-party cloud is required.
+
+## Debugging
+
+Connect the monitor normally over USB and open **Logs & Console** from the
+installer, or use a serial monitor at `115200` baud.
+
+A successful request reports:
+
+```text
+Omniscope: submitting workflow (...-byte request)
+Omniscope: workflow submitted (HTTP 2xx)
+```
+
+Version `.2` reserves a 12288-byte networking-task stack. Version `.1` used
+4096 bytes and overflowed during the first TLS request on the ESP32-C3.
+
+## Build from source
+
+The supported build environment is PlatformIO:
+
+```sh
+platformio run -e esp32-c3
+```
+
+The application image is written to:
+
+```text
+.pio/build/esp32-c3/firmware.bin
+```
+
+The committed browser-installer binaries and their SHA-256 checksums are under
+[`web-flasher/firmware`](web-flasher/firmware).
+
+## Upstream and license
+
+This project is based on the official
+[AirGradient Arduino firmware](https://github.com/airgradienthq/arduino) tag
+`3.3.9`, commit `d8eb6b3c1a699606c59dc908656d23dc64b04caf`.
+
+The upstream project and this fork retain their existing open-source licenses.
+See [LICENSE](LICENSE) and the source-file headers for details. AirGradient is a
+trademark of its respective owner; this is an independently modified firmware
+fork.

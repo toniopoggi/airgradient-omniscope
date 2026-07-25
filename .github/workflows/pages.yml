@@ -3,6 +3,7 @@ name: Deploy Chrome firmware installer
 on:
   push:
     branches:
+      - master
       - omniscope-workflow-api
     paths:
       - "web-flasher/**"
